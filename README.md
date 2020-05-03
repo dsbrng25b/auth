@@ -45,6 +45,12 @@ curl -d '{"username":"myuser","password":"foobar$"}' -H 'Content-Type: applicati
 The server checks the credentials and if they are valid he either sets a cookie with the `Set-Cookie` header or returns a token in the payload, which the client has to store and send in subsequent requests.
 
 ### Cookies
+* https://tools.ietf.org/html/rfc6265
+Cookies are set by using the `Set-Cookie` HTTP header.
+```
+Set-Cookie: <cookie-name>=<cookie-value>; Domain=<domain-value>; Secure; HttpOnly
+```
+
 
 ## JSON Web Token (JWT)
 JWT tokens are digitally signed tokens which consist of three base64 encoded parts sperated by  dots:
@@ -101,6 +107,8 @@ key=mysupersecurekey
 signature=$( echo -n $headerAndPayload | openssl sha256 -hmac $key -binary | base64 -w 0 | sed 's/[-= ]*$//' )
 token=${headerAndPayload}.${signature}
 ```
+If you need a small example on how to achieve the same with Go take a look at [brianvoe/sjwt](https://github.com/brianvoe/sjwt).
+If you look for a more complete solution: https://github.com/square/go-jose
 
 ## TLS / x509 Certificates
 A TLS client can send a certificate (client certificate) to the server. To authenticate the client the server verifies that the certificate is signed from a certian CA.
@@ -114,6 +122,8 @@ for testing we use the same certificate as client certificate
 ```
 curl -k --cert cert.pem --key key.pem https://localhost:8443/handle-tls
 ```
+
+* [No, don't enable revocation checking](https://www.imperialviolet.org/2014/04/19/revchecking.html)
 
 ## OAuth2 / OpenID connect
 * Authorization Code Flow
