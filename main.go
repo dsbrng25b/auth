@@ -7,15 +7,25 @@ import (
 )
 
 func main() {
-	authFunc := userAuthenticator(map[string]string{"dave": "foobar"})
-	//authFunc := authenticateAll()
+	//authFunc := userAuthenticator(map[string]string{"dave": "foobar"})
+	authFunc := authenticateAll()
 	tokenAuthFunc := tokenAuthenticator(map[string]string{"123456": "davem2m"})
 
 	userAuth := &UserAuthenticator{formAuthExtractor, authFunc}
 	tokenAuth := &TokenAuthenticator{bearerTokenExtractor, tokenAuthFunc}
 	tlsAuth := NewDefaultTLSAuthenticator()
 
-	http.Handle("/", NewAuthHandler(userAuth)(http.HandlerFunc(userInfoHandler)))
+	store := NewMemoryStore()
+	tokenStoreAuth := tokenStoreAuthenticate(store)
+	sessionAuth := &TokenAuthenticator{cookieTokenExtractor("SID"), tokenStoreAuth}
+
+	initSession := startSessionHandler("SID", store)
+	logoutSession := removeSessionHandler("SID", store)
+
+	http.Handle("/login", NewAuthHandler(userAuth)(initSession))
+	http.Handle("/logout", logoutSession)
+
+	http.Handle("/", NewAuthHandler(sessionAuth)(http.HandlerFunc(userInfoHandler)))
 
 	http.Handle("/token", NewAuthHandler(tlsAuth, tokenAuth, userAuth)(http.HandlerFunc(userInfoHandler)))
 

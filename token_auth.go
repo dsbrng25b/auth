@@ -18,6 +18,22 @@ func (t *TokenAuthenticator) Authenticate(r *http.Request) (authenticated bool, 
 
 type tokenAuthFunc func(ctx context.Context, token string) (authenticated bool, subject string, groups []string, err error)
 
+func tokenStoreAuthenticate(store Store) tokenAuthFunc {
+	return func(ctx context.Context, token string) (authenticated bool, subject string, groups []string, err error) {
+		var val []byte
+		val, err = store.Get(ctx, token)
+		if err != nil {
+			return
+		}
+		if val == nil {
+			return
+		}
+		authenticated = true
+		subject = string(val)
+		return
+	}
+}
+
 func tokenAuthenticator(tokens map[string]string) tokenAuthFunc {
 	return func(_ context.Context, token string) (bool, string, []string, error) {
 		if subject, ok := tokens[token]; ok {

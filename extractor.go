@@ -34,6 +34,12 @@ func headerTokenExtractor(header string, r *http.Request) (token string) {
 	return r.Header.Get(header)
 }
 
-func cookieTokenExtractor(name string, r *http.Request) string {
-	return ""
+func cookieTokenExtractor(name string) tokenExtractorFunc {
+	return func(r *http.Request) string {
+		c, err := r.Cookie(name)
+		if err != nil {
+			return ""
+		}
+		return c.Value
+	}
 }
