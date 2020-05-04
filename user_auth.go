@@ -10,25 +10,24 @@ type UserAuthenticator struct {
 	auth    userAuthFunc
 }
 
-func (u *UserAuthenticator) Authenticate(r *http.Request) (authenticated bool, subject string, groups []string, err error) {
+func (u *UserAuthenticator) Authenticate(r *http.Request) (*Subject, error) {
 	user, pw := u.extract(r)
-	ok, err := u.auth(r.Context(), user, pw)
-	return ok, user, nil, err
+	return u.auth(r.Context(), user, pw)
 }
 
-type userAuthFunc func(ctx context.Context, user, password string) (authenticated bool, err error)
+type userAuthFunc func(ctx context.Context, user, password string) (*Subject, error)
 
 func userAuthenticator(users map[string]string) userAuthFunc {
-	return func(_ context.Context, user, password string) (bool, error) {
+	return func(_ context.Context, user, password string) (*Subject, error) {
 		if pw, ok := users[user]; ok && pw == password {
-			return true, nil
+			return &Subject{user, nil}, nil
 		}
-		return false, nil
+		return nil, nil
 	}
 }
 
 func authenticateAll() userAuthFunc {
-	return func(_ context.Context, _, _ string) (bool, error) {
-		return true, nil
+	return func(_ context.Context, user, _ string) (*Subject, error) {
+		return &Subject{user, nil}, nil
 	}
 }

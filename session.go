@@ -1,29 +1,36 @@
 package main
 
 import (
-	"crypto/rand"
-	"fmt"
+	"log"
 	"net/http"
 )
 
-func tokenGenerator() string {
-	b := make([]byte, 40)
-	rand.Read(b)
-	return fmt.Sprintf("%x", b)
+const (
+	sessionTokenLength = 40
+)
+
+func handlerErr(w http.ResponseWriter, err error) {
+	log.Println(err)
+	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
-func startSessionHandler(cookieName string, store Store) http.Handler {
+func startSessionHandler(cookieName string, store SubjectStore) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		subject := GetSubject(r)
-		if subject == "" {
+		sub := GetSubject(r)
+		if sub == nil {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
-		sessionToken := tokenGenerator()
-		err := store.Set(r.Context(), sessionToken, []byte(subject))
+		sessionToken, err := GenerateRandomString(sessionTokenLength)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			handlerErr(w, err)
+			return
+		}
+
+		err = store.Set(r.Context(), sessionToken, sub)
+		if err != nil {
+			handlerErr(w, err)
 			return
 		}
 
@@ -37,7 +44,7 @@ func startSessionHandler(cookieName string, store Store) http.Handler {
 	})
 }
 
-func removeSessionHandler(cookieName string, store Store) http.Handler {
+func removeSessionHandler(cookieName string, store SubjectStore) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c := &http.Cookie{
 			Name:   cookieName,

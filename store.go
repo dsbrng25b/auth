@@ -11,6 +11,12 @@ type Store interface {
 	Delete(ctx context.Context, key string) error
 }
 
+type SubjectStore interface {
+	Get(ctx context.Context, key string) (*Subject, error)
+	Set(ctx context.Context, key string, sub *Subject) error
+	Delete(ctx context.Context, key string) error
+}
+
 type MemoryStore struct {
 	sync.RWMutex
 	store map[string][]byte
@@ -53,4 +59,42 @@ func clone(in []byte) (out []byte) {
 		copy(out, in)
 	}
 	return
+}
+
+type MemorySubjectStore struct {
+	sync.RWMutex
+	store map[string]Subject
+}
+
+func NewMemorySubjectStore() *MemorySubjectStore {
+	return &MemorySubjectStore{
+		store: map[string]Subject{},
+	}
+}
+
+func (m *MemorySubjectStore) Get(_ context.Context, key string) (*Subject, error) {
+	m.RLock()
+	sub, ok := m.store[key]
+	m.RUnlock()
+	if ok {
+		return &sub, nil
+	}
+	return nil, nil
+}
+
+func (m *MemorySubjectStore) Set(_ context.Context, key string, sub *Subject) error {
+	if sub == nil {
+		return nil
+	}
+	m.Lock()
+	m.store[key] = *sub
+	m.Unlock()
+	return nil
+}
+
+func (m *MemorySubjectStore) Delete(_ context.Context, key string) error {
+	m.Lock()
+	delete(m.store, key)
+	m.Unlock()
+	return nil
 }

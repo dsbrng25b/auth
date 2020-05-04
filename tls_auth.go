@@ -17,25 +17,25 @@ func NewDefaultTLSAuthenticator() *TLSAuthenticator {
 	}
 }
 
-func (t *TLSAuthenticator) Authenticate(r *http.Request) (authenticated bool, subject string, groups []string, err error) {
+func (t *TLSAuthenticator) Authenticate(r *http.Request) (*Subject, error) {
 	if r.TLS == nil {
-		return
+		return nil, nil
 	}
 
 	if len(r.TLS.PeerCertificates) < 1 {
-		return
+		return nil, nil
 	}
 
-	authenticated = true
 	cert := r.TLS.PeerCertificates[0]
+	sub := &Subject{}
 	if t.extractUser != nil {
-		subject = t.extractUser(cert)
+		sub.Name = t.extractUser(cert)
 	}
 
 	if t.extractGroups != nil {
-		groups = t.extractGroups(cert)
+		sub.Groups = t.extractGroups(cert)
 	}
-	return
+	return sub, nil
 }
 
 type extractCertSubject func(*x509.Certificate) string

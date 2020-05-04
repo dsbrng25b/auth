@@ -10,41 +10,30 @@ type TokenAuthenticator struct {
 	auth    tokenAuthFunc
 }
 
-func (t *TokenAuthenticator) Authenticate(r *http.Request) (authenticated bool, subject string, groups []string, err error) {
+func (t *TokenAuthenticator) Authenticate(r *http.Request) (*Subject, error) {
 	token := t.extract(r)
-	ok, subject, groups, err := t.auth(r.Context(), token)
-	return ok, subject, groups, err
+	return t.auth(r.Context(), token)
 }
 
-type tokenAuthFunc func(ctx context.Context, token string) (authenticated bool, subject string, groups []string, err error)
+type tokenAuthFunc func(ctx context.Context, token string) (*Subject, error)
 
-func tokenStoreAuthenticate(store Store) tokenAuthFunc {
-	return func(ctx context.Context, token string) (authenticated bool, subject string, groups []string, err error) {
-		var val []byte
-		val, err = store.Get(ctx, token)
-		if err != nil {
-			return
-		}
-		if val == nil {
-			return
-		}
-		authenticated = true
-		subject = string(val)
-		return
+func tokenStoreAuthenticate(store SubjectStore) tokenAuthFunc {
+	return func(ctx context.Context, token string) (*Subject, error) {
+		return store.Get(ctx, token)
 	}
 }
 
 func tokenAuthenticator(tokens map[string]string) tokenAuthFunc {
-	return func(_ context.Context, token string) (bool, string, []string, error) {
+	return func(_ context.Context, token string) (*Subject, error) {
 		if subject, ok := tokens[token]; ok {
-			return true, subject, nil, nil
+			return &Subject{subject, nil}, nil
 		}
-		return false, "", nil, nil
+		return nil, nil
 	}
 }
 
 func authenticateAllTokens() tokenAuthFunc {
-	return func(_ context.Context, token string) (bool, string, []string, error) {
-		return true, token, nil, nil
+	return func(_ context.Context, token string) (*Subject, error) {
+		return &Subject{token, nil}, nil
 	}
 }

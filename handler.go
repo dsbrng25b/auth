@@ -10,9 +10,11 @@ func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func userInfoHandler(w http.ResponseWriter, r *http.Request) {
-	user := GetSubject(r)
-	groups := GetGroups(r)
-	fmt.Fprintf(w, "user: %s\n", user)
-	fmt.Fprintf(w, "groups: %v\n", groups)
-	fmt.Fprintf(w, "-----")
+	sub := GetSubject(r)
+	if sub == nil {
+		fmt.Fprintln(w, "unauthenticated")
+	} else {
+		fmt.Fprintf(w, "user: %s\n", sub.Name)
+		fmt.Fprintf(w, "groups: %v\n", sub.Groups)
+	}
 }

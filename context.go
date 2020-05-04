@@ -5,39 +5,34 @@ import (
 	"net/http"
 )
 
-type contextKey string
+type contextKey int
 
 const (
-	contextSubjectKey contextKey = "subject"
-	contextGroupsKey  contextKey = "groups"
+	contextKeySubject contextKey = iota
 )
 
-func GetSubject(r *http.Request) string {
-	u := r.Context().Value(contextSubjectKey)
-	if u == nil {
-		return ""
-	}
-
-	us, _ := u.(string)
-	return us
+type Subject struct {
+	Name   string
+	Groups []string
 }
 
-func GetGroups(r *http.Request) []string {
-	u := r.Context().Value(contextGroupsKey)
-	if u == nil {
+func GetSubject(r *http.Request) *Subject {
+	rawSub := r.Context().Value(contextKeySubject)
+	if rawSub == nil {
 		return nil
 	}
 
-	us, _ := u.([]string)
-	return us
+	sub, ok := rawSub.(Subject)
+	if !ok {
+		return nil
+	}
+	return &sub
 }
 
-func RequestWithSubject(r *http.Request, subject string) *http.Request {
-	ctx := context.WithValue(r.Context(), contextSubjectKey, subject)
-	return r.WithContext(ctx)
-}
-
-func RequestWithGroups(r *http.Request, groups []string) *http.Request {
-	ctx := context.WithValue(r.Context(), contextGroupsKey, groups)
+func RequestWithSubject(r *http.Request, sub *Subject) *http.Request {
+	if sub == nil {
+		return r
+	}
+	ctx := context.WithValue(r.Context(), contextKeySubject, sub)
 	return r.WithContext(ctx)
 }

@@ -15,12 +15,12 @@ func main() {
 	tokenAuth := &TokenAuthenticator{bearerTokenExtractor, tokenAuthFunc}
 	tlsAuth := NewDefaultTLSAuthenticator()
 
-	store := NewMemoryStore()
+	store := NewMemorySubjectStore()
 	tokenStoreAuth := tokenStoreAuthenticate(store)
-	sessionAuth := &TokenAuthenticator{cookieTokenExtractor("SID"), tokenStoreAuth}
+	sessionAuth := &TokenAuthenticator{cookieTokenExtractor("id"), tokenStoreAuth}
 
-	initSession := startSessionHandler("SID", store)
-	logoutSession := removeSessionHandler("SID", store)
+	initSession := startSessionHandler("id", store)
+	logoutSession := removeSessionHandler("id", store)
 
 	http.Handle("/login", NewAuthHandler(userAuth)(initSession))
 	http.Handle("/logout", logoutSession)
