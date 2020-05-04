@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -25,9 +26,9 @@ func Test_http_basic_auth(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	user := GetSubject(innerRequest)
-	if user != "" {
-		t.Errorf("status not ok: want='', got='%s'", user)
+	sub := GetSubject(innerRequest)
+	if sub != nil {
+		t.Errorf("subject have to be nil on unauthenticated request: want=nil, got='%v'", sub)
 	}
 
 	req, err = http.NewRequest("GET", "/welcome", nil)
@@ -40,8 +41,9 @@ func Test_http_basic_auth(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	user = GetSubject(innerRequest)
-	if user != "myuser" {
-		t.Errorf("wrong subject: want='myuser', got='%s'", user)
+	sub = GetSubject(innerRequest)
+	expected := Subject{"myuser", nil}
+	if reflect.DeepEqual(sub, expected) {
+		t.Errorf("wrong subject: want='%v', got='%s'", expected, sub)
 	}
 }

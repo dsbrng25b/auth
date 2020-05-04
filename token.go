@@ -16,7 +16,7 @@ func checkRandReader() {
 
 	_, err := io.ReadFull(rand.Reader, buf)
 	if err != nil {
-		panic(fmt.Sprintf("crypto/rand is unavailable: %w", err))
+		panic(fmt.Sprintf("crypto/rand is unavailable: %v", err))
 	}
 }
 

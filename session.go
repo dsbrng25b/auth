@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 )
 
 const (
-	sessionTokenLength = 40
+	sessionTokenLength = 60
 )
 
 func handlerErr(w http.ResponseWriter, err error) {
@@ -14,11 +16,33 @@ func handlerErr(w http.ResponseWriter, err error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
-func startSessionHandler(cookieName string, store SubjectStore) http.Handler {
+type SessionHandler struct {
+	store      SubjectStore
+	cookieName string
+	duration   time.Duration
+}
+
+func NewDefaultSessionHandler() *SessionHandler {
+	return &SessionHandler{
+		NewMemorySubjectStore(),
+		"id",
+		time.Second * 60 * 3,
+	}
+}
+
+func (s *SessionHandler) Authenticate(r *http.Request) (*Subject, error) {
+	token := CookieTokenExtractor(s.cookieName)(r)
+	if token == "" {
+		return nil, nil
+	}
+	return s.store.Get(r.Context(), token)
+}
+
+func (s *SessionHandler) Login() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sub := GetSubject(r)
 		if sub == nil {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			handlerErr(w, fmt.Errorf("no subject to start session"))
 			return
 		}
 
@@ -28,29 +52,40 @@ func startSessionHandler(cookieName string, store SubjectStore) http.Handler {
 			return
 		}
 
-		err = store.Set(r.Context(), sessionToken, sub)
+		err = s.store.Set(r.Context(), sessionToken, sub)
 		if err != nil {
 			handlerErr(w, err)
 			return
 		}
 
 		c := &http.Cookie{
-			Name:   cookieName,
+			Name:   s.cookieName,
 			Value:  sessionToken,
-			MaxAge: 99999,
+			MaxAge: int(s.duration.Seconds()),
 		}
 		http.SetCookie(w, c)
+
+		//TODO: make this more generic
 		http.Redirect(w, r, "/", 302)
 	})
 }
 
-func removeSessionHandler(cookieName string, store SubjectStore) http.Handler {
+func (s *SessionHandler) Logout() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := CookieTokenExtractor(s.cookieName)(r)
+		if token == "" {
+			http.Redirect(w, r, "/", 302)
+		}
+		err := s.store.Delete(r.Context(), token)
+		if err != nil {
+			handlerErr(w, err)
+		}
 		c := &http.Cookie{
-			Name:   cookieName,
+			Name:   s.cookieName,
 			MaxAge: -1,
 		}
 		http.SetCookie(w, c)
+		//TODO: make more generic
 		http.Redirect(w, r, "/", 302)
 	})
 }

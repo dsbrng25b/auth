@@ -22,11 +22,11 @@ func GetSubject(r *http.Request) *Subject {
 		return nil
 	}
 
-	sub, ok := rawSub.(Subject)
+	sub, ok := rawSub.(*Subject)
 	if !ok {
 		return nil
 	}
-	return &sub
+	return sub
 }
 
 func RequestWithSubject(r *http.Request, sub *Subject) *http.Request {

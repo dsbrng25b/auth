@@ -3,27 +3,44 @@ package main
 import (
 	"context"
 	"net/http"
+	"strings"
 )
 
-type TokenAuthenticator struct {
-	extract tokenExtractorFunc
-	auth    tokenAuthFunc
+func TokenAuthenticator(extract TokenExtractFunc, auth TokenAuthFunc) Authenticator {
+	return AuthenticatorFunc(func(r *http.Request) (*Subject, error) {
+		return auth(r.Context(), extract(r))
+	})
 }
 
-func (t *TokenAuthenticator) Authenticate(r *http.Request) (*Subject, error) {
-	token := t.extract(r)
-	return t.auth(r.Context(), token)
+type TokenExtractFunc func(*http.Request) (token string)
+
+func BearerTokenExtractor(r *http.Request) (token string) {
+	const prefix = "Bearer "
+	token = r.Header.Get("Authorization")
+	if len(token) < len(prefix) || !strings.EqualFold(token[:len(prefix)], prefix) {
+		return ""
+	}
+	token = token[len(prefix):]
+	return token
 }
 
-type tokenAuthFunc func(ctx context.Context, token string) (*Subject, error)
+func HeaderTokenExtractor(header string, r *http.Request) (token string) {
+	return r.Header.Get(header)
+}
 
-func tokenStoreAuthenticate(store SubjectStore) tokenAuthFunc {
-	return func(ctx context.Context, token string) (*Subject, error) {
-		return store.Get(ctx, token)
+func CookieTokenExtractor(name string) TokenExtractFunc {
+	return func(r *http.Request) string {
+		c, err := r.Cookie(name)
+		if err != nil {
+			return ""
+		}
+		return c.Value
 	}
 }
 
-func tokenAuthenticator(tokens map[string]string) tokenAuthFunc {
+type TokenAuthFunc func(ctx context.Context, token string) (*Subject, error)
+
+func tokenAuthenticator(tokens map[string]string) TokenAuthFunc {
 	return func(_ context.Context, token string) (*Subject, error) {
 		if subject, ok := tokens[token]; ok {
 			return &Subject{subject, nil}, nil
@@ -32,7 +49,7 @@ func tokenAuthenticator(tokens map[string]string) tokenAuthFunc {
 	}
 }
 
-func authenticateAllTokens() tokenAuthFunc {
+func authenticateAllTokens() TokenAuthFunc {
 	return func(_ context.Context, token string) (*Subject, error) {
 		return &Subject{token, nil}, nil
 	}

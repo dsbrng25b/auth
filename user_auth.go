@@ -5,19 +5,29 @@ import (
 	"net/http"
 )
 
-type UserAuthenticator struct {
-	extract userExtractorFunc
-	auth    userAuthFunc
+func UserAuthenticator(extract UserExtractFunc, auth UserAuthFunc) Authenticator {
+	return AuthenticatorFunc(func(r *http.Request) (*Subject, error) {
+		user, password := extract(r)
+		return auth(r.Context(), user, password)
+	})
 }
 
-func (u *UserAuthenticator) Authenticate(r *http.Request) (*Subject, error) {
-	user, pw := u.extract(r)
-	return u.auth(r.Context(), user, pw)
+type UserExtractFunc func(*http.Request) (user, password string)
+
+func BasicAuthExtractor(r *http.Request) (user, password string) {
+	user, password, _ = r.BasicAuth()
+	return
 }
 
-type userAuthFunc func(ctx context.Context, user, password string) (*Subject, error)
+func FormValueExtractor(r *http.Request) (user, password string) {
+	user = r.FormValue("username")
+	password = r.FormValue("password")
+	return user, password
+}
 
-func userAuthenticator(users map[string]string) userAuthFunc {
+type UserAuthFunc func(ctx context.Context, user, password string) (*Subject, error)
+
+func userAuthenticator(users map[string]string) UserAuthFunc {
 	return func(_ context.Context, user, password string) (*Subject, error) {
 		if pw, ok := users[user]; ok && pw == password {
 			return &Subject{user, nil}, nil
@@ -26,7 +36,7 @@ func userAuthenticator(users map[string]string) userAuthFunc {
 	}
 }
 
-func authenticateAll() userAuthFunc {
+func authenticateAll() UserAuthFunc {
 	return func(_ context.Context, user, _ string) (*Subject, error) {
 		return &Subject{user, nil}, nil
 	}

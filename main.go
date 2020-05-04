@@ -11,23 +11,18 @@ func main() {
 	authFunc := authenticateAll()
 	tokenAuthFunc := tokenAuthenticator(map[string]string{"123456": "davem2m"})
 
-	userAuth := &UserAuthenticator{formAuthExtractor, authFunc}
-	tokenAuth := &TokenAuthenticator{bearerTokenExtractor, tokenAuthFunc}
+	userAuth := UserAuthenticator(FormValueExtractor, authFunc)
+	tokenAuth := TokenAuthenticator(BearerTokenExtractor, tokenAuthFunc)
 	tlsAuth := NewDefaultTLSAuthenticator()
 
-	store := NewMemorySubjectStore()
-	tokenStoreAuth := tokenStoreAuthenticate(store)
-	sessionAuth := &TokenAuthenticator{cookieTokenExtractor("id"), tokenStoreAuth}
+	session := NewDefaultSessionHandler()
 
-	initSession := startSessionHandler("id", store)
-	logoutSession := removeSessionHandler("id", store)
+	http.Handle("/login", AuthHandler(userAuth)(session.Login()))
+	http.Handle("/logout", session.Logout())
 
-	http.Handle("/login", NewAuthHandler(userAuth)(initSession))
-	http.Handle("/logout", logoutSession)
+	http.Handle("/", AuthHandler(session)(http.HandlerFunc(userInfoHandler)))
 
-	http.Handle("/", NewAuthHandler(sessionAuth)(http.HandlerFunc(userInfoHandler)))
-
-	http.Handle("/token", NewAuthHandler(tlsAuth, tokenAuth, userAuth)(http.HandlerFunc(userInfoHandler)))
+	http.Handle("/token", AuthHandler(tlsAuth, tokenAuth, userAuth)(http.HandlerFunc(userInfoHandler)))
 
 	//http.Handle("/", basicAuthMiddleware(authFunc, basicAuthRequestMiddleware("My Realm", http.HandlerFunc(userInfoHandler))))
 

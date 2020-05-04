@@ -8,7 +8,13 @@ type Authenticator interface {
 	Authenticate(r *http.Request) (*Subject, error)
 }
 
-func NewAuthHandler(as ...Authenticator) func(http.Handler) http.Handler {
+type AuthenticatorFunc func(r *http.Request) (*Subject, error)
+
+func (a AuthenticatorFunc) Authenticate(r *http.Request) (*Subject, error) {
+	return a(r)
+}
+
+func AuthHandler(as ...Authenticator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return authHandler(next, as...)
 	}
