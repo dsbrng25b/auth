@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"context"
@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-func TokenAuthenticator(extract TokenExtractFunc, auth TokenAuthFunc) Authenticator {
+func TokenAuthenticator(extract ExtractTokenFunc, auth AuthTokenFunc) Authenticator {
 	return AuthenticatorFunc(func(r *http.Request) (*Subject, error) {
 		return auth(r.Context(), extract(r))
 	})
 }
 
-type TokenExtractFunc func(*http.Request) (token string)
+type ExtractTokenFunc func(*http.Request) (token string)
 
-func BearerTokenExtractor(r *http.Request) (token string) {
+func ExtractBearerToken(r *http.Request) (token string) {
 	const prefix = "Bearer "
 	token = r.Header.Get("Authorization")
 	if len(token) < len(prefix) || !strings.EqualFold(token[:len(prefix)], prefix) {
@@ -24,11 +24,13 @@ func BearerTokenExtractor(r *http.Request) (token string) {
 	return token
 }
 
-func HeaderTokenExtractor(header string, r *http.Request) (token string) {
-	return r.Header.Get(header)
+func ExtractHeader(header string) ExtractTokenFunc {
+	return func(r *http.Request) (token string) {
+		return r.Header.Get(header)
+	}
 }
 
-func CookieTokenExtractor(name string) TokenExtractFunc {
+func ExtractCookie(name string) ExtractTokenFunc {
 	return func(r *http.Request) string {
 		c, err := r.Cookie(name)
 		if err != nil {
@@ -38,9 +40,9 @@ func CookieTokenExtractor(name string) TokenExtractFunc {
 	}
 }
 
-type TokenAuthFunc func(ctx context.Context, token string) (*Subject, error)
+type AuthTokenFunc func(ctx context.Context, token string) (*Subject, error)
 
-func tokenAuthenticator(tokens map[string]string) TokenAuthFunc {
+func TokenMapAuth(tokens map[string]string) AuthTokenFunc {
 	return func(_ context.Context, token string) (*Subject, error) {
 		if subject, ok := tokens[token]; ok {
 			return &Subject{subject, nil}, nil
@@ -49,7 +51,7 @@ func tokenAuthenticator(tokens map[string]string) TokenAuthFunc {
 	}
 }
 
-func authenticateAllTokens() TokenAuthFunc {
+func AllTokenAuth() AuthTokenFunc {
 	return func(_ context.Context, token string) (*Subject, error) {
 		return &Subject{token, nil}, nil
 	}

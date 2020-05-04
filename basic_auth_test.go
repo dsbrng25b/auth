@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"net/http"
@@ -20,7 +20,7 @@ func Test_http_basic_auth(t *testing.T) {
 		innerRequest = r
 	})
 
-	handler := NewAuthHandler(&UserAuthenticator{basicAuthExtractor, authFunc})(testHandler)
+	handler := AuthHandler(UserAuthenticator(BasicAuthExtractor, authFunc))(testHandler)
 
 	rr := httptest.NewRecorder()
 

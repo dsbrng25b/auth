@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ func NewDefaultSessionHandler() *SessionHandler {
 }
 
 func (s *SessionHandler) Authenticate(r *http.Request) (*Subject, error) {
-	token := CookieTokenExtractor(s.cookieName)(r)
+	token := ExtractCookie(s.cookieName)(r)
 	if token == "" {
 		return nil, nil
 	}
@@ -46,7 +46,7 @@ func (s *SessionHandler) Login() http.Handler {
 			return
 		}
 
-		sessionToken, err := GenerateRandomString(sessionTokenLength)
+		sessionToken, err := generateRandomString(sessionTokenLength)
 		if err != nil {
 			handlerErr(w, err)
 			return
@@ -72,7 +72,7 @@ func (s *SessionHandler) Login() http.Handler {
 
 func (s *SessionHandler) Logout() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := CookieTokenExtractor(s.cookieName)(r)
+		token := ExtractCookie(s.cookieName)(r)
 		if token == "" {
 			http.Redirect(w, r, "/", 302)
 		}

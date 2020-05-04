@@ -1,51 +1,34 @@
-package main
+package auth
 
 import (
 	"crypto/x509"
 	"net/http"
 )
 
-type TLSAuthenticator struct {
-	extractUser   extractCertSubject
-	extractGroups extractCertGroups
+func DefaultTLSAuthenticator() Authenticator {
+	return TLSAuthenticator(extractCertSubject)
 }
 
-func NewDefaultTLSAuthenticator() *TLSAuthenticator {
-	return &TLSAuthenticator{
-		extractCN,
-		extractOUs,
-	}
+func TLSAuthenticator(extract ExtractCertSubjectFunc) Authenticator {
+	return AuthenticatorFunc(func(r *http.Request) (*Subject, error) {
+		if r.TLS == nil {
+			return nil, nil
+		}
+
+		if len(r.TLS.PeerCertificates) < 1 {
+			return nil, nil
+		}
+
+		cert := r.TLS.PeerCertificates[0]
+		return extract(cert), nil
+	})
 }
 
-func (t *TLSAuthenticator) Authenticate(r *http.Request) (*Subject, error) {
-	if r.TLS == nil {
-		return nil, nil
+type ExtractCertSubjectFunc func(*x509.Certificate) *Subject
+
+func extractCertSubject(c *x509.Certificate) *Subject {
+	return &Subject{
+		Name:   c.Subject.CommonName,
+		Groups: c.Subject.OrganizationalUnit,
 	}
-
-	if len(r.TLS.PeerCertificates) < 1 {
-		return nil, nil
-	}
-
-	cert := r.TLS.PeerCertificates[0]
-	sub := &Subject{}
-	if t.extractUser != nil {
-		sub.Name = t.extractUser(cert)
-	}
-
-	if t.extractGroups != nil {
-		sub.Groups = t.extractGroups(cert)
-	}
-	return sub, nil
-}
-
-type extractCertSubject func(*x509.Certificate) string
-
-type extractCertGroups func(*x509.Certificate) []string
-
-func extractCN(c *x509.Certificate) string {
-	return c.Subject.CommonName
-}
-
-func extractOUs(c *x509.Certificate) []string {
-	return c.Subject.OrganizationalUnit
 }

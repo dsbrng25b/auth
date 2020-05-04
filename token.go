@@ -1,8 +1,7 @@
-package main
+package auth
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"io"
 )
@@ -20,11 +19,7 @@ func checkRandReader() {
 	}
 }
 
-// GenerateRandomBytes returns securely generated random bytes.
-// It will return an error if the system's secure random
-// number generator fails to function correctly, in which
-// case the caller should not continue.
-func GenerateRandomBytes(n int) ([]byte, error) {
+func generateRandomBytes(n int) ([]byte, error) {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
 	// Note that err == nil only if we read len(b) bytes.
@@ -35,13 +30,9 @@ func GenerateRandomBytes(n int) ([]byte, error) {
 	return b, nil
 }
 
-// GenerateRandomString returns a securely generated random string.
-// It will return an error if the system's secure random
-// number generator fails to function correctly, in which
-// case the caller should not continue.
-func GenerateRandomString(n int) (string, error) {
+func generateRandomString(n int) (string, error) {
 	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-+$!?_."
-	bytes, err := GenerateRandomBytes(n)
+	bytes, err := generateRandomBytes(n)
 	if err != nil {
 		return "", err
 	}
@@ -49,14 +40,4 @@ func GenerateRandomString(n int) (string, error) {
 		bytes[i] = letters[b%byte(len(letters))]
 	}
 	return string(bytes), nil
-}
-
-// GenerateRandomStringURLSafe returns a URL-safe, base64 encoded
-// securely generated random string.
-// It will return an error if the system's secure random
-// number generator fails to function correctly, in which
-// case the caller should not continue.
-func GenerateRandomStringURLSafe(n int) (string, error) {
-	b, err := GenerateRandomBytes(n)
-	return base64.URLEncoding.EncodeToString(b), err
 }

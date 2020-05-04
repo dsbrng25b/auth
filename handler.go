@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello, world!"))
 }
 
-func userInfoHandler(w http.ResponseWriter, r *http.Request) {
+func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	sub := GetSubject(r)
 	if sub == nil {
 		fmt.Fprintln(w, "unauthenticated")
