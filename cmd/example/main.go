@@ -12,32 +12,59 @@ import (
 )
 
 func main() {
-	//authFunc := auth.UserMapAuth(map[string]string{"dave": "foobar"})
-	authFunc := auth.AuthenticateAll()
-	tokenAuthFunc := auth.TokenMapAuth(map[string]string{"123456": "davem2m"})
+	//
+	// USER
+	//
+	userMapAuthFunc := auth.UserMapAuth(map[string]string{"myuser1": "test123"})
+	userMapAuth := auth.UserAuthenticator(auth.ExtractBasicAuth, userMapAuthFunc)
+	http.Handle("/user/map", auth.AuthHandler(userMapAuth)(auth.UserInfoHandler()))
 
-	userAuth := auth.UserAuthenticator(auth.ExtractFormValue, authFunc)
-	tokenAuth := auth.TokenAuthenticator(auth.ExtractBearerToken, tokenAuthFunc)
-	tlsAuth := auth.DefaultTLSAuthenticator()
+	userAllAuthFunc := auth.AuthenticateAll()
+	userAllAuth := auth.UserAuthenticator(auth.ExtractFormValue, userAllAuthFunc)
+	http.Handle("/user/all", auth.AuthHandler(userAllAuth)(auth.UserInfoHandler()))
 
-	session := auth.NewDefaultSessionHandler()
-	jwtIssuer, err := jwt.IssueJWTHandler(jose.HS256, []byte("fooobarbla"))
+	//
+	// TOKEN
+	//
+	tokenMapAuthFunc := auth.TokenMapAuth(map[string]string{"token123456": "myuser2"})
+	tokenMapAuth := auth.TokenAuthenticator(auth.ExtractBearerToken, tokenMapAuthFunc)
+	http.Handle("/token/map", auth.AuthHandler(tokenMapAuth)(auth.UserInfoHandler()))
+
+	tokenFileAuthFunc, err := auth.TokenFileAuth("token.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
-	jwtAuth := jwt.JWTAuthenticator([]byte("fooobarbla1"))
-	jwtTokenAuth := auth.TokenAuthenticator(auth.ExtractHeader("X-Token"), jwtAuth)
+	tokenFileAuth := auth.TokenAuthenticator(auth.ExtractBearerToken, tokenFileAuthFunc)
+	http.Handle("/token/file", auth.AuthHandler(tokenFileAuth)(auth.UserInfoHandler()))
 
-	http.Handle("/login/session", auth.AuthHandler(userAuth)(session.Login()))
-	http.Handle("/login/jwt", auth.AuthHandler(userAuth)(jwtIssuer))
-	http.Handle("/logout", session.Logout())
-	http.Handle("/jwt", auth.AuthHandler(jwtTokenAuth)(http.HandlerFunc(auth.UserInfoHandler)))
+	//
+	// JWT
+	//
+	// issuer/login
+	jwtIssuer, err := jwt.IssueJWTHandler(jose.HS256, []byte("myhmacsecret"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	http.Handle("/jwt/login", auth.AuthHandler(userAllAuth)(jwtIssuer))
 
-	http.Handle("/", auth.AuthHandler(session)(http.HandlerFunc(auth.UserInfoHandler)))
+	// jwt auth
+	jwtTokenAuthFunc := jwt.JWTAuthenticator([]byte("myhmacsecret"))
+	jwtAuth := auth.TokenAuthenticator(auth.ExtractHeader("X-Token"), jwtTokenAuthFunc)
+	http.Handle("/jwt", auth.AuthHandler(jwtAuth)(auth.UserInfoHandler()))
 
-	http.Handle("/token", auth.AuthHandler(tlsAuth, tokenAuth, userAuth)(http.HandlerFunc(auth.UserInfoHandler)))
+	//
+	// TLS
+	//
+	tlsAuth := auth.DefaultTLSAuthenticator()
+	http.Handle("/tls", auth.AuthHandler(tlsAuth)(auth.UserInfoHandler()))
 
-	//http.Handle("/", basicAuthMiddleware(authFunc, basicAuthRequestMiddleware("My Realm", http.HandlerFunc(userInfoHandler))))
+	//
+	// SESSION
+	//
+	session := auth.NewDefaultSessionHandler()
+	http.Handle("/session/login", auth.AuthHandler(userAllAuth)(session.Login()))
+	http.Handle("/session/logout", session.Logout())
+	http.Handle("/session", auth.AuthHandler(session)(auth.UserInfoHandler()))
 
 	go func() {
 		log.Println("start http server")

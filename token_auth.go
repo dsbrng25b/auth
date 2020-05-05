@@ -1,8 +1,11 @@
 package auth
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -41,6 +44,43 @@ func ExtractCookie(name string) ExtractTokenFunc {
 }
 
 type AuthTokenFunc func(ctx context.Context, token string) (*Subject, error)
+
+func TokenFileAuth(file string) (AuthTokenFunc, error) {
+	tokens := map[string]Subject{}
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	l := 0
+	for scanner.Scan() {
+		l++
+		if scanner.Text() == "" {
+			continue
+		}
+		parts := strings.Fields(scanner.Text())
+		if len(parts) < 2 {
+			return nil, fmt.Errorf("failed to read token file on line: %d", l)
+		}
+		sub := Subject{
+			Name: parts[1],
+		}
+		if len(parts) > 2 {
+			sub.Groups = strings.Split(parts[2], ",")
+		}
+		tokens[parts[0]] = sub
+	}
+	if scanner.Err() != nil {
+		return nil, err
+	}
+	return func(_ context.Context, token string) (*Subject, error) {
+		if sub, ok := tokens[token]; ok {
+			return &sub, nil
+		}
+		return nil, nil
+	}, nil
+}
 
 func TokenMapAuth(tokens map[string]string) AuthTokenFunc {
 	return func(_ context.Context, token string) (*Subject, error) {

@@ -37,7 +37,10 @@ func UserMapAuth(users map[string]string) AuthUserFunc {
 }
 
 func AuthenticateAll() AuthUserFunc {
-	return func(_ context.Context, user, _ string) (*Subject, error) {
-		return &Subject{user, nil}, nil
+	return func(_ context.Context, user, password string) (*Subject, error) {
+		if user != "" {
+			return &Subject{user, nil}, nil
+		}
+		return nil, nil
 	}
 }
