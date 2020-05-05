@@ -2,6 +2,8 @@ package auth
 
 import (
 	"crypto/rand"
+	"encoding/ascii85"
+	"encoding/base64"
 	"fmt"
 	"io"
 )
@@ -19,25 +21,30 @@ func checkRandReader() {
 	}
 }
 
-func generateRandomBytes(n int) ([]byte, error) {
+func GenerateRandomBytes(n int) ([]byte, error) {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
-	// Note that err == nil only if we read len(b) bytes.
 	if err != nil {
 		return nil, err
 	}
-
 	return b, nil
 }
 
-func generateRandomString(n int) (string, error) {
-	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-+$!?_."
-	bytes, err := generateRandomBytes(n)
+func GenerateTokenASCII85(nBytes int) (string, error) {
+	n := nBytes + nBytes/2
+	t := make([]byte, n)
+	b, err := GenerateRandomBytes(nBytes)
 	if err != nil {
 		return "", err
 	}
-	for i, b := range bytes {
-		bytes[i] = letters[b%byte(len(letters))]
+	_ = ascii85.Encode(t, b)
+	return string(t), nil
+}
+
+func GenerateTokenBase64(nBytes int) (string, error) {
+	b, err := GenerateRandomBytes(nBytes)
+	if err != nil {
+		return "", err
 	}
-	return string(bytes), nil
+	return base64.RawStdEncoding.EncodeToString(b), nil
 }

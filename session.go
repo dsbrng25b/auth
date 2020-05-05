@@ -46,7 +46,7 @@ func (s *SessionHandler) Login() http.Handler {
 			return
 		}
 
-		sessionToken, err := generateRandomString(sessionTokenLength)
+		sessionToken, err := GenerateTokenASCII85(sessionTokenLength)
 		if err != nil {
 			handlerErr(w, err)
 			return
