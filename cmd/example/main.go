@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/dsbrng25b/auth"
+	"github.com/dvob/auth"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/dsbrng25b/auth/jwt"
+	"github.com/dvob/auth/jwt"
 )
 
 func main() {

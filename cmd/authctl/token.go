@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/dsbrng25b/auth"
+	"github.com/dvob/auth"
 	"github.com/spf13/cobra"
 )
 

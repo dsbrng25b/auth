@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc"
-	"github.com/dsbrng25b/auth"
+	"github.com/dvob/auth"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
@@ -71,9 +71,9 @@ func IssueJWTHandler(algorithm jose.SignatureAlgorithm, key interface{}) (http.H
 
 		cl := jwt.Claims{
 			Subject:   sub.Name,
-			Issuer:    "dsbrng25b/auth",
+			Issuer:    "dvob",
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Audience:  jwt.Audience{"dsbrng25b/auth"},
+			Audience:  jwt.Audience{"dvob"},
 		}
 
 		privateCl := struct {
